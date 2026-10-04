@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FFE6CF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>CrabbyBurner</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preload" href="fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="app" id="app">
+  <header class="top">
+    <span class="mark"><span class="mark-crab" id="markCrab"></span>CrabbyBurner</span>
+    <span class="top-right">
+      <span class="tab plan" id="plan"></span>
+      <span class="status"><i id="beat"></i><span id="statusText">Connecting</span></span>
+      <time class="clock" id="clock">--:--</time>
+      <button class="fs" id="fs" type="button" aria-label="Full screen" hidden>
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>
+      </button>
+    </span>
+  </header>
+
+  <section class="block" aria-labelledby="headline">
+    <span class="tab hot">Session · 5 hours</span>
+    <h1 id="headline" class="text">Counting tokens.</h1>
+    <p class="quip" id="quip">Reading your Claude Code logs.</p>
+    <div class="stage" id="stage"><canvas id="crab" role="img" aria-label="The crab is waiting for numbers"></canvas></div>
+    <p class="reset"><span id="sReset">Resets in –</span><span class="at" id="sAt"></span></p>
+  </section>
+
+  <section class="card week" aria-label="This week">
+    <span class="tab">This week</span>
+    <p class="big"><span id="wPct">–</span><small> used</small></p>
+    <div class="bits" id="wBits"></div>
+    <div class="foot">
+      <p class="small" id="wReset"></p>
+      <p class="small" id="wScoped"></p>
+    </div>
+  </section>
+
+  <section class="card today" aria-label="Today">
+    <span class="tab">Today</span>
+    <p class="big"><span id="tTokens">–</span><small> tokens</small></p>
+    <div class="hours" id="tHours"></div>
+    <div class="foot">
+      <p class="small" id="tReplies"></p>
+    </div>
+  </section>
+
+  <section class="card now" aria-label="Now">
+    <span class="tab" id="nowTab">Now</span>
+    <p class="now-line"><b id="nProject">Waiting for the first reply</b> <span class="meta" id="nMeta"></span><span class="meta more" id="nMore"></span></p>
+  </section>
+</main>
+<script src="sprite.js"></script>
+<script src="crab.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

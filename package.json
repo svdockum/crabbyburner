@@ -1,0 +1,14 @@
+{
+  "name": "crabbyburner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Claude usage on an old phone next to your PC, with a crab.",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "engines": {
+    "node": ">=22.2"
+  }
+}

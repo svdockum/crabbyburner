@@ -1,0 +1,14 @@
+{
+  "name": "CrabbyBurner",
+  "short_name": "Crabby",
+  "description": "How much of your Claude session is burned, on a phone next to your PC.",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#FFE6CF",
+  "theme_color": "#FFE6CF",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,145 @@
+/* CrabbyBurner Â· "Kaartenbak" in orange: ink on apricot, one orange, one letter,
+   every subject a card with a tab. The session is the big black block. */
+@font-face{font-family:"Schibsted Grotesk";src:url(fonts/schibsted-grotesk-latin.woff2) format("woff2");font-weight:400 900;font-style:normal;font-display:swap}
+
+:root{
+  --ground:#FFE6CF; --ink:#141110; --orange:#FF6A13; --marker:#FFC690; --ice:#9CC7CE;
+  --quiet:#7A5F4C; --on-ink:#FFFFFF; --on-ink-quiet:#C9B8AC; --empty:#F2C9A6;
+  --font:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --rand:2px solid var(--ink);
+  --radius:12px; --radius-l:20px; --rond:999px;
+  --zacht:0 6px 18px -14px rgba(20,17,16,.35);
+  --grad-ink:linear-gradient(145deg,#2A2523 0%,#141110 52%,#3B1606 100%);
+  --grad-orange:linear-gradient(135deg,#FF8A3D 0%,#F0520C 100%);
+  --grad-marker:linear-gradient(135deg,#FFD9B5 0%,#FFC08A 100%);
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+
+*{box-sizing:border-box}
+html{height:100%;background:var(--ground);-webkit-text-size-adjust:100%}
+body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:var(--ink);font:400 16px/1.4 var(--font);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+::selection{background:var(--marker);color:var(--ink)}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+button{font:inherit;color:inherit}
+
+/* the sheet */
+.app{
+  height:100%;max-width:1100px;margin:0 auto;padding:12px 16px 16px;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;
+  grid-template-areas:"top top" "block block" "week today" "now now";grid-gap:20px 12px;
+  transition:transform 2s var(--ease)
+}
+
+/* top bar */
+.top{grid-area:top;display:flex;align-items:center;justify-content:space-between;min-height:32px;margin-bottom:-4px}
+.mark{display:flex;align-items:center;min-width:0;overflow:hidden;font:900 16px/1 var(--font);letter-spacing:-.03em;white-space:nowrap}
+.mark-crab{display:block;flex:none;width:28px;height:17px;margin-right:7px}
+.mark-crab svg{display:block;width:100%;height:100%}
+.top-right{display:flex;flex:none;align-items:center}
+.top-right>*{margin-left:5px}
+.clock{font:700 16px/1 var(--font);font-feature-settings:"tnum";letter-spacing:-.01em}
+.status{display:inline-flex;align-items:center;font:700 11px/13px var(--font);letter-spacing:.08em;text-transform:uppercase;padding:1px 7px 1px 6px;border:var(--rand);border-radius:var(--rond);white-space:nowrap}
+.status i{position:relative;display:block;width:7px;height:7px;margin-right:5px;border-radius:50%;background:var(--quiet)}
+.live .status i{background:var(--orange)}
+.offline .status{background:var(--ice)}
+.offline .status i{background:var(--ink)}
+.status i.beat{animation:beat .7s var(--ease)}
+@keyframes beat{0%{box-shadow:0 0 0 0 rgba(255,106,19,.7);transform:scale(1.5)}100%{box-shadow:0 0 0 9px rgba(255,106,19,0);transform:scale(1)}}
+.fs[hidden]{display:none}
+.fs{display:flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:var(--rand);border-radius:var(--rond);background:transparent;cursor:pointer}
+.fs svg{width:14px;height:14px}
+.fs:active{background:var(--marker)}
+.tab.plan{display:none}
+
+/* tabs */
+.tab{display:inline-block;font:700 11px/16px var(--font);letter-spacing:.08em;text-transform:uppercase;padding:1px 10px;background:var(--grad-ink);color:var(--on-ink);white-space:nowrap;border-radius:var(--rond)}
+.tab.hot{background:var(--grad-orange);color:var(--ink)}
+.tab.ice{background:var(--ice);color:var(--ink)}
+.block>.tab,.card>.tab{position:absolute;top:-10px;left:14px;z-index:1}
+
+/* the session block */
+.block{grid-area:block;position:relative;display:flex;flex-direction:column;min-height:0;background:var(--grad-ink);color:var(--on-ink);border:var(--rand);border-radius:var(--radius-l);box-shadow:var(--zacht);padding:22px 18px 14px}
+.block h1{margin:0 0 6px;font-weight:900;font-size:42px;font-size:clamp(34px,11vw,72px);line-height:.92;letter-spacing:-.04em;white-space:nowrap}
+.block h1.text{white-space:normal}
+.pct{color:var(--orange)}
+#sPct{font-feature-settings:"tnum"}
+.quip{margin:0;font:500 15px/20px var(--font);color:var(--on-ink-quiet)}
+.stage{position:relative;flex:1 1 auto;min-height:84px;margin:8px -8px 0;overflow:hidden;border-radius:6px;cursor:pointer}
+.stage canvas{position:absolute;left:50%;bottom:0;-webkit-transform:translateX(-50%);transform:translateX(-50%);image-rendering:crisp-edges;image-rendering:pixelated}
+.reset{display:flex;justify-content:space-between;align-items:baseline;margin:10px 0 0;font:700 15px/20px var(--font);font-feature-settings:"tnum"}
+.reset .at{font-weight:500;color:var(--on-ink-quiet)}
+
+/* cards */
+.card{position:relative;display:flex;flex-direction:column;min-width:0;background:var(--ground);border:var(--rand);border-radius:var(--radius);box-shadow:var(--zacht);padding:18px 14px 12px}
+.card .foot{margin-top:auto}
+.week{grid-area:week}
+.today{grid-area:today}
+.now{grid-area:now;padding:15px 14px 11px}
+.big{margin:0 0 10px;font-weight:900;font-size:32px;line-height:1;letter-spacing:-.03em;font-feature-settings:"tnum";white-space:nowrap}
+.big small{font:500 13px/1 var(--font);letter-spacing:0;color:var(--quiet)}
+.small{margin:8px 0 0;font:400 13px/17px var(--font);color:var(--quiet);font-feature-settings:"tnum"}
+.small b{font-weight:700;color:var(--ink)}
+.small:empty{display:none}
+
+/* week: twenty bits, five percent each */
+/* both meters take whatever height the card has spare, within reason */
+.bits{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));grid-gap:2px;-webkit-box-flex:1;flex:1 1 auto;min-height:12px;max-height:40px}
+.bits i{display:block;background:var(--empty);border-radius:1px;transition:background-color .3s}
+.bits i.on{background:var(--orange)}
+.bits i.edge{background:var(--orange);animation:flicker 1.1s steps(1) infinite}
+.bits i.on.hot{background:#D9480F}
+@keyframes flicker{0%{opacity:1}35%{opacity:.55}55%{opacity:1}80%{opacity:.75}}
+
+/* today: tokens per hour */
+.hours{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));grid-gap:2px;-webkit-box-flex:1;flex:1 1 auto;min-height:38px;max-height:84px}
+.hours i{display:block;height:100%;background:var(--empty);border-radius:1px;-webkit-transform-origin:50% 100%;transform-origin:50% 100%;transition:transform .5s var(--ease)}
+.hours i{-webkit-transform:scaleY(.08);transform:scaleY(.08)}
+.hours i.past{background:var(--ink)}
+.hours i.cur{background:var(--orange)}
+
+/* now */
+.now-line{margin:0;font:400 15px/20px var(--font);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-line b{font-weight:700}
+.now-line .meta{color:var(--quiet)}
+@media (max-width:419px){.now-line .more{display:none}}
+
+/* offline: the numbers are old, say so by fading them */
+.offline .block h1,.offline .big,.offline .bits,.offline .hours,.offline .now-line{opacity:.45;transition:opacity .4s}
+
+/* one entrance, when the first numbers land */
+.enter .block{animation:drop .7s var(--ease) both}
+.enter .card{animation:rise .6s var(--ease) both}
+.enter .week{animation-delay:.08s}
+.enter .today{animation-delay:.14s}
+.enter .now{animation-delay:.2s}
+@keyframes drop{from{-webkit-transform:translateY(-14px);transform:translateY(-14px)}to{-webkit-transform:none;transform:none}}
+@keyframes rise{from{-webkit-transform:translateY(16px);transform:translateY(16px)}to{-webkit-transform:none;transform:none}}
+
+@media (min-width:420px){
+  .tab.plan{display:inline-block}
+}
+@media (min-width:700px) and (min-height:700px){
+  .app{padding:24px 28px 28px;grid-gap:26px 18px}
+  .big{font-size:44px}
+  .small{font-size:15px;line-height:20px}
+  .quip{font-size:18px;line-height:24px}
+  .reset{font-size:18px}
+  .now-line{font-size:17px}
+}
+/* landscape, propped up next to the monitor */
+@media (orientation:landscape){
+  .app{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"top top top" "block week today" "block now now";grid-gap:18px 12px}
+  .block h1{font-size:40px;font-size:clamp(28px,10vh,72px)}
+}
+@media (orientation:landscape) and (max-height:420px){
+  .app{padding:8px 14px 12px;grid-gap:16px 10px}
+  .block{padding:18px 14px 10px}
+  .quip{font-size:13px;line-height:17px}
+  .stage{min-height:60px;margin-top:4px}
+  .reset{margin-top:6px;font-size:14px}
+  .big{font-size:28px;margin-bottom:8px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
