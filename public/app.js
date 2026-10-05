@@ -67,18 +67,24 @@
   function tween(el, to, fmt, ms) {
     var from = typeof el._v === 'number' ? el._v : 0;
     el._v = to;
-    if (reduced || from === to) { el.textContent = fmt(to); return; }
+    if (reduced || from === to) { setNum(el, fmt(to)); return; }
     var t0 = 0;
     function step(ts) {
       if (!t0) t0 = ts;
       var k = Math.min(1, (ts - t0) / ms);
       var e = k === 1 ? 1 : 1 - Math.pow(2, -10 * k);
-      el.textContent = fmt(from + (to - from) * e);
+      setNum(el, fmt(from + (to - from) * e));
       if (k < 1 && el._v === to) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
   }
   function pctText(v) { return Math.round(v) + '%'; }
+
+  // Tabular digits keep ticking numbers still, but this face also widens
+  // ":" "," "." under tnum, so only the digit runs get it.
+  function setNum(el, text) {
+    el.innerHTML = String(text).replace(/\d+/g, '<span class="tn">$&</span>');
+  }
 
   /* ---------- build the fixed bits once ---------- */
   var bits = [], hours = [], i;
@@ -95,6 +101,28 @@
     if (p < 95) return 'Running hot. The crab is getting crabby.';
     if (p < 100) return 'Last few bites left.';
     return 'Cooked. The crab will wait.';
+  }
+
+  // What the PC does about sessions the limit cut off; it takes the quip's place.
+  function who(list) {
+    var names = list.map(function (x) { return x.project || 'a session'; });
+    if (names.length === 1) return names[0];
+    if (names.length === 2 && names[0] !== names[1]) return names[0] + ' and ' + names[1];
+    return names.length + ' sessions';
+  }
+  function resumeNote(r) {
+    var list = (r && r.sessions) || [];
+    function of(st) { return list.filter(function (x) { return x.state === st; }); }
+    var running = of('running'), stuck = of('stuck').concat(of('held')), waiting = of('waiting'), done = of('done');
+    if (running.length) return 'Continuing ' + who(running) + '.';
+    if (stuck.length) return who(stuck) + (stuck.length === 1 ? ' won’t continue by itself.' : ' won’t continue by themselves.');
+    if (waiting.length) {
+      var at = Math.min.apply(null, waiting.map(function (x) { return x.resetsAt; }));
+      return who(waiting) + (waiting.length === 1 ? ' continues' : ' continue') + ' at ' + hm(new Date(at)) + '.';
+    }
+    var bad = done.filter(function (x) { return !x.ok; });
+    if (bad.length) return 'Couldn’t continue ' + who(bad) + '. Details on the PC.';
+    return done.length ? 'Picked up ' + who(done) + ' at ' + hm(new Date(done[0].at)) + '.' : '';
   }
 
   function headline(pct, err) {
@@ -153,6 +181,8 @@
     var s = fresh(lim, lim.session) ? lim.session : null;
     var pct = s ? Math.round(s.percent) : null;
     headline(pct, lim.error);
+    var note = resumeNote(d.resume);
+    if (note) $('quip').textContent = note;
     sessionAt = s && s.resetsAt ? Date.parse(s.resetsAt) : null;
     stage.setBurn(pct === null ? null : pct / 100);
     if (prevPct !== null && pct !== null && pct < prevPct - 10) stage.celebrate();
@@ -217,13 +247,13 @@
   /* ---------- every second: clock and countdowns ---------- */
 
   function tick() {
-    $('clock').textContent = hm(new Date(now()));
+    setNum($('clock'), hm(new Date(now())));
     if (!data || app.classList.contains('offline')) return;
     var lim = data.limits || {};
     if (sessionAt) {
       var full = prevPct !== null && prevPct >= 100;
-      $('sReset').textContent = (full ? 'Back in ' : 'Resets in ') + span(sessionAt - now());
-      $('sAt').textContent = 'at ' + hm(new Date(sessionAt));
+      setNum($('sReset'), (full ? 'Back in ' : 'Resets in ') + span(sessionAt - now()));
+      setNum($('sAt'), 'at ' + hm(new Date(sessionAt)));
     } else {
       $('sReset').textContent = lim.error ? 'Limits unavailable' : 'Resets in –';
       $('sAt').textContent = '';

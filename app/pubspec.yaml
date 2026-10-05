@@ -1,0 +1,37 @@
+name: crabbyburner
+description: "Claude usage on an old phone next to your PC, with a crab."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.4.3
+  http: ^1.6.0
+  shared_preferences: ^2.5.5
+  wakelock_plus: ^1.8.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Bundled so the phone never fetches a font; same face as the web page.
+  # License: assets/fonts/OFL.txt
+  fonts:
+    - family: SchibstedGrotesk
+      fonts:
+        - asset: assets/fonts/SchibstedGrotesk-400.ttf
+          weight: 400
+        - asset: assets/fonts/SchibstedGrotesk-500.ttf
+          weight: 500
+        - asset: assets/fonts/SchibstedGrotesk-700.ttf
+          weight: 700
+        - asset: assets/fonts/SchibstedGrotesk-900.ttf
+          weight: 900

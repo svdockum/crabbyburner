@@ -81,6 +81,76 @@ test('names the project the session started in, not the subfolder the shell wand
   assert.equal(projectName('', 'x'), null);
 });
 
+const SID = '4b74996a-b248-4768-b403-7a546ad0a1b5';
+const RESET = NOW + 30 * 60e3;
+
+function line(o) {
+  return JSON.stringify({ isSidechain: false, sessionId: SID, cwd: 'D:\\Repos\\alpha', timestamp: new Date(NOW - 60e3).toISOString(), ...o }) + '\n';
+}
+const prompt = (text, extra) => line({ type: 'user', message: { role: 'user', content: text }, permissionMode: 'bypassPermissions', ...extra });
+const answer = () => line({ type: 'assistant', message: { id: 'm' + Math.random(), model: 'claude-opus-5-5', usage: { output_tokens: 5 } } });
+const limit = (resetsAt = RESET, extra) =>
+  line({
+    type: 'assistant',
+    message: { id: 'x' + resetsAt, model: '<synthetic>', usage: { output_tokens: 0 }, content: [{ type: 'text', text: "You've hit your session limit" }] },
+    quotaLimits: { status: 'rejected', resetsAt: resetsAt / 1000, rateLimitType: 'five_hour' },
+    error: 'rate_limit',
+    isApiErrorMessage: true,
+    ...extra,
+  });
+
+async function stopsOf(root, text, file = path.join(root, 'proj', SID + '.jsonl')) {
+  writeFileSync(file, text);
+  const logs = createLogTracker({ root, now: () => NOW });
+  await logs.refresh();
+  return logs.stops();
+}
+
+test('a session that ends on the 5-hour limit reply is cut off until then', async () => {
+  const [s, more] = await stopsOf(setup(), prompt('build it') + answer() + limit());
+  assert.equal(more, undefined);
+  assert.equal(s.sessionId, SID);
+  assert.equal(s.resetsAt, RESET);
+  assert.equal(s.cwd, 'D:\\Repos\\alpha');
+  assert.equal(s.mode, 'bypassPermissions');
+});
+
+test('a cut-off session resumes from the folder it started in, not where the shell wandered', async () => {
+  const root = setup();
+  const wandered = path.join('D:' + path.sep, 'Repos', 'alpha', 'web');
+  mkdirSync(path.join(root, 'D--Repos-alpha'));
+  const [s] = await stopsOf(root, limit(RESET, { cwd: wandered }), path.join(root, 'D--Repos-alpha', SID + '.jsonl'));
+  assert.equal(s.cwd, path.join('D:' + path.sep, 'Repos', 'alpha'));
+  assert.equal(s.project, 'alpha');
+});
+
+test('a typed prompt or a real reply after the limit means the session went on', async () => {
+  assert.deepEqual(await stopsOf(setup(), limit() + prompt('continue')), []);
+  assert.deepEqual(await stopsOf(setup(), limit() + answer()), []);
+  assert.deepEqual(await stopsOf(setup(), limit() + prompt([{ type: 'text', text: 'contiue' }])), []);
+});
+
+test('task notices, slash commands and meta lines do not count as taking over', async () => {
+  const text =
+    limit() +
+    prompt('<task-notification>\n<task-id>abc</task-id>') +
+    prompt('<command-name>/usage</command-name>') +
+    prompt('Another Claude session sent a message', { isMeta: true }) +
+    prompt([{ type: 'tool_result', content: 'ok' }]) +
+    line({ type: 'queue-operation' });
+  assert.equal((await stopsOf(setup(), text)).length, 1);
+});
+
+test('hitting the limit again moves the reset; subagents and the weekly limit do not cut a session off', async () => {
+  const later = RESET + 5 * 3600e3;
+  assert.equal((await stopsOf(setup(), limit() + prompt('continue') + limit(later)))[0].resetsAt, later);
+  const root = setup();
+  assert.deepEqual(await stopsOf(root, limit(RESET, { isSidechain: true }), path.join(root, 'proj', 'sess', 'subagents', 'agent-x.jsonl')), []);
+  const weekly = limit(RESET, { quotaLimits: { status: 'rejected', resetsAt: RESET / 1000, rateLimitType: 'seven_day' } });
+  assert.deepEqual(await stopsOf(setup(), weekly), []);
+  assert.deepEqual(await stopsOf(setup(), limit() + weekly), []);
+});
+
 test('a missing log folder is an empty week, not a crash', async () => {
   const logs = createLogTracker({ root: path.join(os.tmpdir(), 'crabby-does-not-exist-' + Date.now()), now: () => NOW });
   await logs.refresh();
