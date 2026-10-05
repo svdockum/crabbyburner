@@ -21,6 +21,9 @@
       <span class="tab plan" id="plan"></span>
       <span class="status"><i id="beat"></i><span id="statusText">Connecting</span></span>
       <time class="clock" id="clock">--:--</time>
+      <button class="fs" id="histOpen" type="button" aria-label="History">
+        <svg viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M1 8h3v5H1zM5.5 4h3v9h-3zM10 1h3v12h-3z"/></svg>
+      </button>
       <button class="fs" id="fs" type="button" aria-label="Full screen" hidden>
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>
       </button>
@@ -59,8 +62,57 @@
     <p class="now-line"><b id="nProject">Waiting for the first reply</b> <span class="meta" id="nMeta"></span><span class="meta more" id="nMore"></span></p>
   </section>
 </main>
+
+<div class="history" id="history" role="dialog" aria-modal="true" aria-labelledby="hTitle" hidden>
+  <div class="hist-sheet">
+    <header class="top">
+      <span class="mark" id="hTitle">History</span>
+      <span class="top-right">
+        <span class="small" id="hSince"></span>
+        <button class="fs" id="histClose" type="button" aria-label="Close">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12"/></svg>
+        </button>
+      </span>
+    </header>
+
+    <section class="block hist-compare" aria-label="This week against last week">
+      <span class="tab hot">This week vs last</span>
+      <h2 class="hist-delta" id="hDelta">–</h2>
+      <p class="quip" id="hCompare">Reading every log on your PC. This takes a few seconds the first time.</p>
+    </section>
+
+    <section class="card" aria-label="Tokens per week">
+      <span class="tab">Weeks</span>
+      <div class="chart" id="hWeeks"></div>
+      <div class="chart-axis" id="hWeeksAxis"></div>
+      <div class="foot"><p class="small" id="hBestWeek"></p></div>
+    </section>
+
+    <section class="card" aria-label="Tokens per day">
+      <span class="tab">Days · 4 weeks</span>
+      <div class="chart" id="hDays"></div>
+      <div class="chart-axis" id="hDaysAxis"></div>
+      <div class="foot"><p class="small" id="hBestDay"></p></div>
+    </section>
+
+    <section class="card" aria-label="Projects">
+      <span class="tab">Projects</span>
+      <p class="hist-sub">This week</p>
+      <div class="rows" id="hProjWeek"></div>
+      <p class="hist-sub">All time</p>
+      <div class="rows" id="hProjAll"></div>
+    </section>
+
+    <section class="card" aria-label="Weekly limit">
+      <span class="tab">Weekly limit · peak</span>
+      <div class="rows" id="hLimits"></div>
+      <div class="foot"><p class="small" id="hLimitsNote"></p></div>
+    </section>
+  </div>
+</div>
 <script src="sprite.js"></script>
 <script src="crab.js"></script>
 <script src="app.js"></script>
+<script src="history.js"></script>
 </body>
 </html>
