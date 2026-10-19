@@ -1,5 +1,5 @@
-// CrabbyBurner: serves the phone page and /api/usage on the local network, and
-// takes the phone's auto-continue settings at /api/resume.
+// CrabbyBurner: serves the phone page, /api/usage and /api/history on the local
+// network, and takes the phone's auto-continue settings at /api/resume.
 import http from 'node:http';
 import { promises as fsp } from 'node:fs';
 import path from 'node:path';
@@ -7,6 +7,7 @@ import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLogTracker } from './logs.mjs';
 import { createLimits } from './limits.mjs';
+import { createHistory } from './history.mjs';
 import { createResumer } from './resume.mjs';
 import { createDoor, createSettings, MODES } from './settings.mjs';
 
@@ -62,7 +63,7 @@ function readBody(req, max) {
   });
 }
 
-export function createApp({ logs = createLogTracker(), limits = createLimits(), settings = createSettings(), log = () => {} } = {}) {
+export function createApp({ logs = createLogTracker(), limits = createLimits(), history = createHistory(), settings = createSettings(), log = () => {} } = {}) {
   let scannedAt = 0;
   const resumer = createResumer({
     stops: logs.stops,
@@ -126,6 +127,7 @@ export function createApp({ logs = createLogTracker(), limits = createLimits(), 
     } else {
       logs.refresh();
     }
+    history.noteLimits(limits.get());
     return { now: Date.now(), limits: limits.get(), logs: logs.snapshot(), resume: resumer.status() };
   }
 
@@ -136,8 +138,9 @@ export function createApp({ logs = createLogTracker(), limits = createLimits(), 
       res.writeHead(405).end();
       return;
     }
-    if (route === '/api/usage') {
-      const body = JSON.stringify(await usage());
+    if (route === '/api/usage' || route === '/api/history') {
+      if (route === '/api/history') history.refresh();
+      const body = JSON.stringify(route === '/api/usage' ? await usage() : { now: Date.now(), history: history.snapshot() });
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(body);
       return;
@@ -159,6 +162,8 @@ export function createApp({ logs = createLogTracker(), limits = createLimits(), 
   // Warm both sources so the phone's first request has something to show.
   logs.refresh();
   limits.refresh();
+  // Reads every log still on disk, so it finishes behind the live numbers.
+  history.refresh();
 
   const server = http.createServer((req, res) => {
     handle(req, res).catch(() => {
@@ -167,8 +172,15 @@ export function createApp({ logs = createLogTracker(), limits = createLimits(), 
     });
   });
   // Cut-off sessions get picked up whether or not a phone is watching.
-  const watcher = setInterval(() => logs.refresh().then(resumer.tick, () => {}), 30e3);
-  server.on('close', () => clearInterval(watcher));
+  const watcher = setInterval(() => {
+    logs.refresh().then(resumer.tick, () => {});
+    limits.refresh().then(() => history.noteLimits(limits.get()), () => {});
+    history.refresh().catch(() => {});
+  }, 30e3);
+  server.on('close', () => {
+    clearInterval(watcher);
+    history.save();
+  });
   return server;
 }
 

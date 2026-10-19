@@ -104,6 +104,34 @@ button{font:inherit;color:inherit}
 .now-line .meta{color:var(--quiet)}
 @media (max-width:419px){.now-line .more{display:none}}
 
+/* history: a sheet over the display, scrolls on its own */
+.today{cursor:pointer}
+.history{position:fixed;top:0;right:0;bottom:0;left:0;z-index:5;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--ground)}
+.history[hidden]{display:none}
+.hist-sheet{max-width:1100px;margin:0 auto;padding:12px 16px 24px;display:grid;grid-template-columns:minmax(0,1fr);grid-gap:22px}
+.hist-sheet>*{grid-area:auto}
+.hist-sheet .top{margin-bottom:-6px}
+.hist-sheet .top .small{margin:0 6px 0 0}
+.hist-compare{padding-bottom:18px}
+.hist-delta{margin:0 0 8px;font-weight:900;font-size:clamp(30px,10vw,56px);line-height:.95;letter-spacing:-.04em}
+.chart{display:flex;align-items:flex-end;height:110px;margin-top:4px}
+.chart i{flex:1 1 0;margin:0 1px;min-width:0;background:var(--ink);border-radius:2px 2px 0 0;transition:height .5s var(--ease)}
+.chart i.cur{background:var(--orange)}
+.chart i.best{box-shadow:inset 0 3px 0 var(--marker)}
+.chart-axis{display:flex;justify-content:space-between;margin-top:5px;font:500 11px/14px var(--font);color:var(--quiet)}
+.hist-sub{margin:4px 0 6px;font:700 11px/16px var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--quiet)}
+.hist-sub~.hist-sub{margin-top:14px}
+.rows .row{display:grid;grid-template-columns:minmax(0,9em) minmax(0,1fr) auto;align-items:center;grid-gap:8px;margin:5px 0;font:400 14px/18px var(--font)}
+.row-name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.row-bar{height:10px;background:var(--empty);border-radius:2px;overflow:hidden}
+.row-bar i{display:block;height:100%;background:var(--ink)}
+.row-bar i.hot{background:var(--orange)}
+.rows b{font-weight:700;font-feature-settings:"tnum"}
+@media (min-width:700px){
+  .hist-sheet{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding:24px 28px 28px;grid-gap:26px 18px}
+  .hist-sheet .top,.hist-compare{grid-column:1/-1}
+}
+
 /* offline: the numbers are old, say so by fading them */
 .offline .block h1,.offline .big,.offline .bits,.offline .hours,.offline .now-line{opacity:.45;transition:opacity .4s}
 

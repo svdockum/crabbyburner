@@ -94,6 +94,23 @@ keeps the screen on. If the PC gets a new address, the app finds it again.
 - **Now:** the last session Claude replied in, and how long ago. In the app,
   tap it for the list of sessions.
 
+### History
+
+Tap the chart button at the top, or the **Today** card, for **History**:
+
+- **This week vs last:** tokens so far this week against last week up to the
+  same weekday.
+- **Weeks** and **Days:** tokens per week (12 weeks) and per day (4 weeks),
+  with your biggest week and day ever.
+- **Projects:** which projects burned the most, this week and all time.
+- **Weekly limit · peak:** how full the weekly limit got, per limit week.
+
+Tokens come from every Claude Code log still on the PC. Claude Code deletes
+logs older than 30 days unless you raise `cleanupPeriodDays` in
+`~/.claude/settings.json`, so CrabbyBurner also keeps the day totals in
+`~/.crabbyburner-history.json`. The limit percentages can't be looked up
+afterwards; they are kept from the day CrabbyBurner first runs.
+
 ## Auto-continue after the 5-hour limit
 
 When the 5-hour limit stops a Claude Code session, the session waits until you

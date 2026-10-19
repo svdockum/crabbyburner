@@ -53,7 +53,8 @@ test('the phone can change the setting only with the code', async () => {
     stops: () => [],
     sessions: () => [{ sessionId: SID, project: 'alpha', lastAt: Date.now() }],
   };
-  const server = createApp({ logs, limits: { refresh() {}, get: () => ({}) }, settings });
+  const history = { refresh: async () => {}, snapshot: () => ({}), noteLimits() {}, save: async () => {} };
+  const server = createApp({ logs, limits: { refresh() {}, get: () => ({}) }, history, settings });
   await new Promise((res) => server.listen(0, '127.0.0.1', res));
   const url = `http://127.0.0.1:${server.address().port}/api/resume`;
   const post = (body, code = settings.get().code) =>
