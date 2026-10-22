@@ -85,6 +85,8 @@ export function createResumer({ stops, sessions = () => [], settings, run = runC
 
   // Why a cut-off session will not continue by itself whatever the setting says.
   function blocked(s, t) {
+    // Runs in Claude Desktop's own sandbox, which `claude --resume` can't reach.
+    if (s.desktop) return 'desktop';
     if (handled.has(key(s))) return 'failed'; // resumed, yet still cut off at this reset
     if ((counts.get(s.sessionId) || 0) >= MAX) return 'tries';
     if (t >= s.resetsAt + GRACE) return 'late';
@@ -125,6 +127,7 @@ export function createResumer({ stops, sessions = () => [], settings, run = runC
   function continueNow(id) {
     const s = stops().find((x) => x.sessionId === id);
     if (!s) return 'gone';
+    if (s.desktop) return 'desktop';
     if (running.has(id)) return 'running';
     const t = now();
     if (t < s.resetsAt || full()) return 'limit';
@@ -134,7 +137,7 @@ export function createResumer({ stops, sessions = () => [], settings, run = runC
   }
 
   function cutRow(s, t) {
-    const row = { id: s.sessionId, project: s.project, cutAt: s.at, resetsAt: s.resetsAt };
+    const row = { id: s.sessionId, project: s.project, cutAt: s.at, resetsAt: s.resetsAt, desktop: !!s.desktop };
     if (running.has(s.sessionId)) return { ...row, state: 'running', at: running.get(s.sessionId).since };
     const why = blocked(s, t);
     if (why) return { ...row, state: 'stuck', reason: why, error: why === 'failed' ? results.get(s.sessionId)?.error ?? null : null };
@@ -150,7 +153,9 @@ export function createResumer({ stops, sessions = () => [], settings, run = runC
       if (!rows.has(id) && t - r.end < KEEP) rows.set(id, { id, project: r.project, state: 'done', at: r.at, ok: r.ok, error: r.error });
     }
     for (const s of sessions()) {
-      if (!rows.has(s.sessionId) && t - s.lastAt < RECENT) rows.set(s.sessionId, { id: s.sessionId, project: s.project, state: 'active', at: s.lastAt });
+      if (!rows.has(s.sessionId) && t - s.lastAt < RECENT) {
+        rows.set(s.sessionId, { id: s.sessionId, project: s.project, state: 'active', at: s.lastAt, desktop: !!s.desktop });
+      }
     }
     const { mode, picks } = settings.get();
     const list = [...rows.values()]

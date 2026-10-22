@@ -93,7 +93,11 @@ class SessionRow {
     this.reason,
     this.error,
     this.ok = true,
+    this.desktop = false,
   });
+
+  /// A Claude Desktop session: counted and shown, never continued from here.
+  final bool desktop;
 
   final String id;
   final RowState state;
@@ -109,7 +113,7 @@ class SessionRow {
   final DateTime? at;
   final DateTime? cutAt, resetsAt;
 
-  /// Why a stuck one won't go: 'tries', 'late' or 'failed' (then [error]).
+  /// Why a stuck one won't go: 'desktop', 'tries', 'late' or 'failed' (then [error]).
   final String? reason, error;
   final bool ok;
 
@@ -132,6 +136,7 @@ class SessionRow {
       reason: m['reason'] as String?,
       error: m['error'] as String?,
       ok: m['ok'] != false,
+      desktop: m['desktop'] == true,
     );
   }
 }

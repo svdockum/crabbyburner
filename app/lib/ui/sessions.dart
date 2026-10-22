@@ -62,6 +62,7 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
             'limit' => 'The limit hasn’t reset yet.',
             'gone' => 'It isn’t cut off any more.',
             'running' => 'It’s already continuing.',
+            'desktop' => 'That one runs in Claude Desktop; continue it there.',
             'session' => 'The PC doesn’t know that session any more.',
             _ => 'The PC said no.',
           },
@@ -182,6 +183,7 @@ class _Row extends StatelessWidget {
     final reset = s.resetsAt == null ? '' : hm(s.resetsAt!);
     return switch (s.state) {
       RowState.stuck => switch (s.reason) {
+          'desktop' => '$cut · runs in Claude Desktop, continue it there',
           'tries' => '$cut · tried 3 times, stopped trying',
           'late' => '$cut · the reset at $reset was hours ago',
           _ => '$cut · couldn’t continue',
@@ -199,8 +201,8 @@ class _Row extends StatelessWidget {
     final sc = uiScale(context);
     final s = row;
     final resetPassed = s.resetsAt != null && !now.isBefore(s.resetsAt!);
-    final canNow = resetPassed && (s.state == RowState.stuck || (s.state == RowState.held && mode == 'off'));
-    final canSwitch = mode != 'off' && const [RowState.held, RowState.waiting, RowState.active].contains(s.state);
+    final canNow = !s.desktop && resetPassed && (s.state == RowState.stuck || (s.state == RowState.held && mode == 'off'));
+    final canSwitch = !s.desktop && mode != 'off' && const [RowState.held, RowState.waiting, RowState.active].contains(s.state);
     final attention = s.state == RowState.stuck || s.state == RowState.held;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 10 * sc),

@@ -6,7 +6,7 @@
 import { readFileSync, promises as fsp } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { defaultLogRoot, projectName } from './logs.mjs';
+import { DESKTOP, defaultLogRoot, desktopFor, listLogs, projectName } from './logs.mjs';
 
 const DAY = 864e5;
 const LIST_EVERY = 60e3;
@@ -66,7 +66,7 @@ function readSaved(file) {
   }
 }
 
-export function createHistory({ root = defaultLogRoot(), file = defaultHistoryFile(), now = Date.now } = {}) {
+export function createHistory({ root = defaultLogRoot(), desktop = desktopFor(root), file = defaultHistoryFile(), now = Date.now } = {}) {
   const saved = readSaved(file);
   const scanned = new Map(); // day -> totals counted from the logs this run
   const peaks = new Map(); // day -> { session, weekly } seen this run
@@ -79,16 +79,9 @@ export function createHistory({ root = defaultLogRoot(), file = defaultHistoryFi
   let savedAt = 0;
   let dirty = false;
 
-  async function listFiles() {
-    try {
-      const names = await fsp.readdir(root, { recursive: true });
-      return names.filter((n) => n.endsWith('.jsonl')).map((n) => path.join(root, n));
-    } catch {
-      return [];
-    }
-  }
+  const listFiles = () => listLogs(root, desktop);
 
-  function ingest(text, folder) {
+  function ingest(text, folder, fromDesktop) {
     let o;
     try {
       o = JSON.parse(text);
@@ -112,13 +105,13 @@ export function createHistory({ root = defaultLogRoot(), file = defaultHistoryFi
     d.tokens += total;
     d.output += u.output_tokens || 0;
     d.replies++;
-    const project = projectName(o.cwd || '', folder) || folder;
+    const project = fromDesktop ? DESKTOP : projectName(o.cwd || '', folder) || folder;
     d.projects[project] = (d.projects[project] || 0) + total;
     dirty = true;
   }
 
-  async function readNew(file, start, end) {
-    const folder = path.relative(root, file).split(path.sep)[0];
+  async function readNew({ file, root: base, desktop: fromDesktop }, start, end) {
+    const folder = path.relative(base, file).split(path.sep)[0];
     const fh = await fsp.open(file, 'r');
     let pos = start;
     let carry = Buffer.alloc(0);
@@ -134,7 +127,7 @@ export function createHistory({ root = defaultLogRoot(), file = defaultHistoryFi
         let nl;
         while ((nl = data.indexOf(10, from)) !== -1) {
           const line = data.subarray(from, nl);
-          if (line.includes(NEEDLE)) ingest(line.toString('utf8'), folder);
+          if (line.includes(NEEDLE)) ingest(line.toString('utf8'), folder, fromDesktop);
           from = nl + 1;
         }
         carry = data.subarray(from);
@@ -151,7 +144,8 @@ export function createHistory({ root = defaultLogRoot(), file = defaultHistoryFi
       files = await listFiles();
       listedAt = t;
     }
-    for (const f of files) {
+    for (const entry of files) {
+      const f = entry.file;
       let st;
       try {
         st = await fsp.stat(f);
@@ -164,7 +158,7 @@ export function createHistory({ root = defaultLogRoot(), file = defaultHistoryFi
       if (st.size < offset) offset = 0;
       if (st.size > offset) {
         try {
-          offset += await readNew(f, offset, st.size);
+          offset += await readNew(entry, offset, st.size);
         } catch {
           continue;
         }

@@ -159,3 +159,20 @@ test('a missing log folder is an empty week, not a crash', async () => {
   assert.equal(s.today.tokens, 0);
   assert.equal(s.last, null);
 });
+
+test('Claude Desktop agent sessions count as "Claude Desktop", and are found in their sandboxes', async () => {
+  const base = mkdtempSync(path.join(os.tmpdir(), 'crabby-desk-'));
+  const box = path.join(base, 'acct', 'org', 'local_1', '.claude', 'projects');
+  mkdirSync(path.join(box, '-sessions-ecstatic-nice-clarke'), { recursive: true });
+  writeFileSync(path.join(box, '-sessions-ecstatic-nice-clarke', SID + '.jsonl'), reply({ id: 'd1', cwd: '/sessions/ecstatic-nice-clarke' }) + limit(RESET, { cwd: '/sessions/ecstatic-nice-clarke' }));
+  const { desktopLogRoots } = await import('../src/logs.mjs');
+  const roots = await desktopLogRoots([base, path.join(base, 'not-there')]);
+  assert.deepEqual(roots, [box]);
+
+  const logs = createLogTracker({ root: setup(), desktop: async () => roots, now: () => NOW });
+  await logs.refresh();
+  assert.equal(logs.snapshot().last.project, 'Claude Desktop');
+  const [s] = logs.stops();
+  assert.equal(s.desktop, true);
+  assert.equal(s.project, 'Claude Desktop');
+});

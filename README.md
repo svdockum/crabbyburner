@@ -126,6 +126,11 @@ using. This works for sessions started in a terminal and in the VS Code
 extension. CrabbyBurner checks every 30 seconds, whether or not a phone is
 watching.
 
+Claude Desktop's agent sessions are counted and listed (as "Claude Desktop"),
+but never continued: they run in Desktop's own sandbox, which `claude
+--resume` can't reach. When the limit cuts one off, it shows up under **Won't
+continue** so you know to continue it in Desktop.
+
 ### Choosing which sessions continue
 
 In the app, tap the **Now** card to open **Sessions**. At the top, choose:
@@ -141,6 +146,7 @@ switch a session on before the limit hits it.
 The **Won't continue** card lists cut-off sessions that won't continue by
 themselves, with the reason:
 
+- it's a Claude Desktop session;
 - it's switched off, or auto-continue is off;
 - it was tried 3 times;
 - the reset was more than 3 hours ago;
@@ -203,8 +209,10 @@ cmd /k "cd /d C:\path\to\crabbyburner && npm start"
 ## What it reads and what it sends
 
 - **Session logs:** it reads Claude Code's session logs in
-  `~/.claude/projects` to count tokens and to see which sessions the limit cut
-  off. It keeps numbers, times, project folder names and session IDs from them,
+  `~/.claude/projects`, and Claude Desktop's agent-session logs in its app data
+  folder, to count tokens and to see which sessions the limit cut off. Desktop's
+  normal chats leave no logs on the PC, so only the plan percentages include
+  them. It keeps numbers, times, project folder names and session IDs from them,
   not what you and Claude wrote.
 - **Your login:** it reads Claude Code's login from
   `~/.claude/.credentials.json` to ask Anthropic for your plan limits, the same

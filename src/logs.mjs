@@ -70,7 +70,71 @@ export function projectName(cwd, folder) {
   return p && (path.basename(p) || p);
 }
 
-export function createLogTracker({ root = defaultLogRoot(), now = Date.now } = {}) {
+// Claude Desktop's agent sessions run Claude Code in a sandbox per session and
+// keep the same kind of logs, under <sessions>/<a>/<b>/<sandbox>/.claude/projects.
+// The folder holding them moves with how Desktop was installed.
+const DESKTOP = 'Claude Desktop';
+
+function desktopSessionDirs() {
+  const home = os.homedir();
+  const local = process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
+  const roaming = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
+  return [
+    path.join(roaming, 'Claude', 'local-agent-mode-sessions'),
+    path.join(home, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions'),
+    { under: path.join(local, 'Claude-Data'), then: ['local-agent-mode-sessions'] },
+    { under: path.join(local, 'Packages'), match: /^Claude_/, then: ['LocalCache', 'Roaming', 'Claude', 'local-agent-mode-sessions'] },
+  ];
+}
+
+async function subdirs(dir) {
+  try {
+    return (await fsp.readdir(dir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => path.join(dir, d.name));
+  } catch {
+    return [];
+  }
+}
+
+export async function desktopLogRoots(candidates = desktopSessionDirs()) {
+  const bases = [];
+  for (const c of candidates) {
+    if (typeof c === 'string') bases.push(c);
+    else for (const d of await subdirs(c.under)) if (!c.match || c.match.test(path.basename(d))) bases.push(path.join(d, ...c.then));
+  }
+  const roots = [];
+  for (const base of bases) {
+    for (const a of await subdirs(base)) {
+      for (const b of await subdirs(a)) {
+        for (const box of await subdirs(b)) roots.push(path.join(box, '.claude', 'projects'));
+      }
+    }
+  }
+  return roots;
+}
+
+/** Every session log: Claude Code's own, then Claude Desktop's ({ file, root, desktop }). */
+export async function listLogs(root, desktop) {
+  const out = [];
+  const roots = [[root, false], ...(await desktop()).map((r) => [r, true])];
+  for (const [dir, fromDesktop] of roots) {
+    try {
+      const names = await fsp.readdir(dir, { recursive: true });
+      for (const n of names) if (n.endsWith('.jsonl')) out.push({ file: path.join(dir, n), root: dir, desktop: fromDesktop });
+    } catch {
+      // Not there (yet): Desktop not installed, or a sandbox without logs.
+    }
+  }
+  return out;
+}
+
+export const desktopFor = (root) => (root === defaultLogRoot() ? desktopLogRoots : async () => []);
+export { DESKTOP };
+
+export function createLogTracker({
+  root = defaultLogRoot(),
+  desktop = desktopFor(root),
+  now = Date.now,
+} = {}) {
   const offsets = new Map(); // file -> bytes consumed
   const seen = new Map(); // message id + request id -> timestamp
   let events = [];
@@ -89,18 +153,11 @@ export function createLogTracker({ root = defaultLogRoot(), now = Date.now } = {
     return names.get(key);
   }
 
-  async function listFiles() {
-    try {
-      const names = await fsp.readdir(root, { recursive: true });
-      return names.filter((n) => n.endsWith('.jsonl')).map((n) => path.join(root, n));
-    } catch {
-      return [];
-    }
-  }
+  const listFiles = () => listLogs(root, desktop);
 
   // A cut-off session's log ends on the limit reply. It stays cut off until a
   // real reply or a typed prompt follows; a new limit reply moves the reset.
-  function watch(file, line, folder) {
+  function watch(file, line, folder, fromDesktop) {
     const m = line.indexOf(MODE);
     if (m !== -1) {
       const end = line.indexOf(34, m + MODE.length);
@@ -110,14 +167,20 @@ export function createLogTracker({ root = defaultLogRoot(), now = Date.now } = {
     const cut = cutOff(o);
     if (cut) {
       // Resume where the session started, so it stays the same project.
-      stops.set(file, { ...cut, cwd: projectDir(cut.cwd, folder), project: nameFor(cut.cwd, folder), mode: modes.get(file) || null });
+      stops.set(file, {
+        ...cut,
+        cwd: projectDir(cut.cwd, folder),
+        project: fromDesktop ? DESKTOP : nameFor(cut.cwd, folder),
+        mode: modes.get(file) || null,
+        desktop: fromDesktop,
+      });
       return;
     }
     if (!stops.has(file) || !line.includes(MAIN)) return;
     if (line.includes(ASSISTANT) || (line.includes(USER) && typedPrompt(o || parse(line.toString('utf8'))))) stops.delete(file);
   }
 
-  function ingest(text, folder, session) {
+  function ingest(text, folder, session, fromDesktop) {
     const o = parse(text);
     const m = o && o.type === 'assistant' ? o.message : null;
     const u = m && m.usage;
@@ -130,9 +193,9 @@ export function createLogTracker({ root = defaultLogRoot(), now = Date.now } = {
       if (seen.has(key)) return;
       seen.set(key, t);
     }
-    const project = nameFor(o.cwd || '', folder);
+    const project = fromDesktop ? DESKTOP : nameFor(o.cwd || '', folder);
     if (session && !o.isSidechain && o.sessionId && !(sessions.get(o.sessionId)?.lastAt > t)) {
-      sessions.set(o.sessionId, { sessionId: o.sessionId, project, lastAt: t });
+      sessions.set(o.sessionId, { sessionId: o.sessionId, project, lastAt: t, desktop: fromDesktop });
     }
     events.push({
       t,
@@ -147,8 +210,8 @@ export function createLogTracker({ root = defaultLogRoot(), now = Date.now } = {
 
   // Reads [start, end) and returns how many bytes ended in a complete line.
   // A half-written last line stays unconsumed and is read again next time.
-  async function readNew(file, start, end) {
-    const parts = path.relative(root, file).split(path.sep);
+  async function readNew({ file, root: base, desktop: fromDesktop }, start, end) {
+    const parts = path.relative(base, file).split(path.sep);
     const folder = parts[0];
     // <project>/<session>.jsonl; subagents log under <project>/<session>/subagents/.
     const session = parts.length === 2;
@@ -167,8 +230,8 @@ export function createLogTracker({ root = defaultLogRoot(), now = Date.now } = {
         let nl;
         while ((nl = data.indexOf(10, from)) !== -1) {
           const line = data.subarray(from, nl);
-          if (line.includes(NEEDLE)) ingest(line.toString('utf8'), folder, session);
-          if (session) watch(file, line, folder);
+          if (line.includes(NEEDLE)) ingest(line.toString('utf8'), folder, session, fromDesktop);
+          if (session) watch(file, line, folder, fromDesktop);
           from = nl + 1;
         }
         carry = data.subarray(from);
@@ -193,7 +256,8 @@ export function createLogTracker({ root = defaultLogRoot(), now = Date.now } = {
       files = await listFiles();
       listedAt = t;
     }
-    for (const file of files) {
+    for (const entry of files) {
+      const { file } = entry;
       let st;
       try {
         st = await fsp.stat(file);
@@ -211,7 +275,7 @@ export function createLogTracker({ root = defaultLogRoot(), now = Date.now } = {
       }
       if (st.size > offset) {
         try {
-          offset += await readNew(file, offset, st.size);
+          offset += await readNew(entry, offset, st.size);
         } catch {
           continue;
         }

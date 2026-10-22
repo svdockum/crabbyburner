@@ -173,3 +173,13 @@ test('resumes in the mode the session ran in, and only a known one', () => {
   assert.deepEqual(resumeArgs(stop({ mode: 'evil && rm' })), ['-p', '--resume', SID, 'continue']);
   assert.deepEqual(resumeArgs(stop({ mode: null })), ['-p', '--resume', SID, 'continue']);
 });
+
+test('never continues a Claude Desktop session, but lists it as not continuing', async () => {
+  const { r, clock, calls, row, settle } = setup({ stops: [stop({ desktop: true, project: 'Claude Desktop' })] });
+  clock.t = RESET + MIN;
+  r.tick();
+  await settle();
+  assert.equal(calls.length, 0);
+  assert.deepEqual([row().state, row().reason, row().desktop], ['stuck', 'desktop', true]);
+  assert.equal(r.continueNow(SID), 'desktop');
+});
